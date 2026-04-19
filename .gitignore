@@ -17,6 +17,7 @@ ENV/
 outputs/
 .env
 context/
+test_assets/
 
 # IDEs
 .vscode/

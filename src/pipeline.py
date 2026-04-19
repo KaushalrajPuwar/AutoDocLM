@@ -6,6 +6,8 @@ from pathlib import Path
 
 from src.config import RunConfig
 from src.ingest.clone_repo import ingest_repo
+from src.ingest.file_filter import filter_files
+from src.ingest.classify_files import classify_files
 
 logger = logging.getLogger(__name__)
 
@@ -63,4 +65,16 @@ class Orchestrator:
         self._save_metadata()
 
         logger.info("Pipeline Step 0 and 1 completed successfully.")
+        
+        # Step 2: File Filtering
+        logger.info("=== STEP 2: File Filtering ===")
+        manifest_path = filter_files(self.config, raw_repo_path, self.project_dir)
+        logger.info(f"File manifest created at: {manifest_path}")
+        
+        # Step 3: File Classification
+        logger.info("=== STEP 3: File Classification ===")
+        classified_path = classify_files(self.config, manifest_path, self.project_dir)
+        logger.info(f"Classified files mapped at: {classified_path}")
+        
+        logger.info("Pipeline Step 2 and 3 completed successfully.")
         # Future steps will follow here.

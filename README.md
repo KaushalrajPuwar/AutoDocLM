@@ -1,6 +1,6 @@
 <div align="center">
   <h1>AutoDocLM</h1>
-</div>
+
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue?style=for-the-badge)](https://www.python.org/downloads/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue?style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
@@ -9,6 +9,8 @@
 
 
 > **Fully Automated, High-Fidelity Codebase Documentation Generator via LLM Inference and Graph Theory.**
+
+</div>
 
 ---
 

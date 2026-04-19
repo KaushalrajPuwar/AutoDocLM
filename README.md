@@ -132,6 +132,6 @@ This project is currently under active development.
 * **Step 0-1:** ✅ Stable (Ingestion & CLI)
 * **Step 2-3:** ✅ Stable (Filtering & Classification)
 * **Step 4:** ✅ Stable (AST/Tree-sitter Chunking)
-* **Step 5-14:** 🏗 In Progress (Graph Auth & Inference)
+* **Step 5-10:** 🏗 In Progress (Graph Auth & Inference)
 
 ---

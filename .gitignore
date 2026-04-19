@@ -18,6 +18,7 @@ outputs/
 .env
 context/
 test_assets/
+scratch/
 
 # IDEs
 .vscode/

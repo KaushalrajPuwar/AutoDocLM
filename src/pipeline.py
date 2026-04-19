@@ -8,6 +8,7 @@ from src.config import RunConfig
 from src.ingest.clone_repo import ingest_repo
 from src.ingest.file_filter import filter_files
 from src.ingest.classify_files import classify_files
+from src.chunking.orchestrator import chunk_repo
 
 logger = logging.getLogger(__name__)
 
@@ -77,4 +78,11 @@ class Orchestrator:
         logger.info(f"Classified files mapped at: {classified_path}")
         
         logger.info("Pipeline Step 2 and 3 completed successfully.")
+
+        # Step 4: Chunking
+        logger.info("=== STEP 4: Chunking ===")
+        chunks_path = chunk_repo(self.config, self.project_dir)
+        logger.info(f"Chunks written to: {chunks_path}")
+
+        logger.info("Pipeline Steps 0–4 completed successfully.")
         # Future steps will follow here.

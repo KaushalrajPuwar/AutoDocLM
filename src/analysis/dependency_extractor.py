@@ -17,7 +17,13 @@ def _extract_from_requirements_txt(file_path: Path) -> list[str]:
         return []
     try:
         with open(file_path, "r", encoding="utf-8") as f:
-            return [line.strip() for line in f if line.strip() and not line.startswith("#")]
+            valid_lines = []
+            for line in f:
+                # Strip inline and full-line comments
+                clean_line = line.split('#')[0].strip()
+                if clean_line:
+                    valid_lines.append(clean_line)
+            return valid_lines
     except Exception as e:
         logger.error(f"Error reading requirements.txt {file_path}: {e}")
         return []

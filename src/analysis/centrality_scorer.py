@@ -27,9 +27,10 @@ def score_centrality(import_graph_path: Path, output_path: Path):
         logger.warning("Import graph is empty. Skipping centrality scoring.")
         centrality = {}
     else:
-        # In-degree centrality is a good measure of importance:
-        # a file is important if many other files import it.
-        centrality = nx.in_degree_centrality(G)
+        # We use PageRank (as defined in our architectural specs) because it
+        # models a recursive "random surfer", meaning a file is important not just 
+        # if it's imported often, but if it is imported by *other important files*.
+        centrality = nx.pagerank(G, alpha=0.85)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:

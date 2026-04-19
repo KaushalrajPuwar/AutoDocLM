@@ -1,0 +1,61 @@
+import argparse
+import logging
+import sys
+from typing import Optional
+
+from src.config import (
+    DEFAULT_INCLUDE_TESTS,
+    DEFAULT_MAX_CHUNKS,
+    DEFAULT_MAX_FILE_SIZE_KB,
+    DEFAULT_MAX_FILES,
+    DEFAULT_SKIP_LARGE_ASSETS,
+    DEFAULT_USE_EMBEDDINGS,
+    RunConfig,
+)
+from src.pipeline import Orchestrator
+
+# Setup basic logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
+
+def main():
+    parser = argparse.ArgumentParser(description="AutoDocLM: Automatic Repository Documentation Generator")
+    parser.add_argument("-r", "--repo-url", type=str, default=None, help="Public GitHub repository URL to document.")
+    parser.add_argument("-z", "--repo-zip", type=str, default=None, help="Local zip file of the repository to document.")
+    parser.add_argument("--max-files", type=int, default=DEFAULT_MAX_FILES, help="Maximum number of files to process.")
+    parser.add_argument("--max-chunks", type=int, default=DEFAULT_MAX_CHUNKS, help="Maximum number of chunks to extract.")
+    parser.add_argument("--max-file-size-kb", type=int, default=DEFAULT_MAX_FILE_SIZE_KB, help="Maximum file size in KB to parse.")
+    parser.add_argument("--use-embeddings", action="store_true", default=DEFAULT_USE_EMBEDDINGS, help="Enable generating FAISS embeddings for retrieval.")
+    parser.add_argument("--include-tests", action="store_true", default=DEFAULT_INCLUDE_TESTS, help="Include test files in graph analysis.")
+    parser.add_argument("--skip-large-assets", action="store_true", default=DEFAULT_SKIP_LARGE_ASSETS, help="Skip large binary assets during analysis.")
+    parser.add_argument("--force-clone", action="store_true", default=False, help="Force deletion and re-clone of existing raw_repo directory.")
+
+    args = parser.parse_args()
+
+    if not args.repo_url and not args.repo_zip:
+        parser.error("You must provide either --repo-url or --repo-zip.")
+    
+    if args.repo_url and args.repo_zip:
+        parser.error("Provide only one of --repo-url or --repo-zip. Not both.")
+
+    config = RunConfig(
+        repo_url=args.repo_url,
+        repo_zip=args.repo_zip,
+        max_files=args.max_files,
+        max_chunks=args.max_chunks,
+        max_file_size_kb=args.max_file_size_kb,
+        use_embeddings=args.use_embeddings,
+        include_tests=args.include_tests,
+        skip_large_assets=args.skip_large_assets,
+        force_clone=args.force_clone
+    )
+
+    try:
+        orchestrator = Orchestrator(config)
+        orchestrator.run()
+    except Exception as e:
+        logger.error(f"Pipeline failed: {e}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()

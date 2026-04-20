@@ -2,10 +2,10 @@
   <h1>AutoDocLM</h1><h4>(Under Development)</h4>
 
 
-[![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=fff&style=for-the-badge)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/Python-FFD43B?logo=python&logoColor=000000&style=for-the-badge)](https://www.python.org/)
 [![Ollama](https://img.shields.io/badge/Ollama-fff?logo=ollama&logoColor=000&style=for-the-badge)](https://ollama.com/)
 [![Qwen](https://custom-icon-badges.demolab.com/badge/Qwen-605CEC?logo=qwen&logoColor=fff&style=for-the-badge)](https://qwen.ai/home)
-[![NetworkX](https://img.shields.io/badge/NetworkX-005C8A?style=for-the-badge)](https://networkx.org/)
+[![NetworkX](https://custom-icon-badges.demolab.com/badge/NetworkX-F8F9FA?logo=networkx&style=for-the-badge)](https://networkx.org/)
 [![ChromaDB](https://custom-icon-badges.demolab.com/badge/ChromaDB-1F2937?logo=chromadb&style=for-the-badge)](https://www.trychroma.com/)
 [![MkDocs](https://img.shields.io/badge/MkDocs-526CFE?logo=materialformkdocs&logoColor=fff&style=for-the-badge)](https://www.mkdocs.org/)
 
@@ -105,7 +105,7 @@ Create a `.env` file in the root directory to store your inference keys.
 ```bash
 # External API for Inference
 INFERENCE_API_KEY="sk-your-key-here"
-INFERENCE_BASE_URL="https://api.nscale.com/v1"
+INFERENCE_BASE_URL="https://inference.api.nscale.com/v1"
 INFERENCE_MODEL="Qwen/Qwen2.5-Coder-32B-Instruct"
 
 # Local Embeddings (Requires Ollama running locally)
@@ -117,7 +117,7 @@ Execute the pipeline against a public repository. The outputs will be generated 
 
 ```bash
 # Analyze an external Git repository
-uv run python main.py --repo-url https://github.com/pallets/flask.git
+uv run python main.py --repo-url https://github.com/username/repo.git
 
 # Generate documentation from a local zipped repository
 uv run python main.py --repo-zip ./my_codebase.zip
@@ -137,7 +137,7 @@ This project is currently under active development.
 - ✅ **Step 4:** AST & Tree-sitter Chunking
 - ✅ **Step 5:** Static Analysis (Import Graphs, Cross-File Calls, Centrality)
 - ✅ **Step 6:** Embedding and ChromaDB Setup
-- ⬜ **Step 7:** LLM Inference
+- ✅ **Step 7:** LLM Inference
 - ⬜ **Step 8:** Doc Writing / Markdown Generation
 - ⬜ **Step 9:** Mermaid Diagram Generation
 - ⬜ **Step 10:** MkDocs & Site Build

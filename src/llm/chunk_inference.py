@@ -16,7 +16,9 @@ async def process_chunk(
     client: InferenceClient,
     config: RunConfig,
     out_dir: str,
-    semaphore: asyncio.Semaphore
+    semaphore: asyncio.Semaphore,
+    index: int,
+    total: int
 ) -> None:
     """
     Process a single chunk. Check cache first, then call LLM if missing, and output to designated directory.
@@ -25,25 +27,37 @@ async def process_chunk(
     model = config.chunk_model
     stage = "chunk"
     prompt_version = PROMPT_VERSION.get("chunk", "v1")
-    
     out_file = os.path.join(out_dir, "summaries", "chunks", f"{chunk_id}.json")
     if os.path.exists(out_file):
-        # Already fully completed and written to disk from a previous run
-        return
+        try:
+            with open(out_file, "r") as f:
+                data = json.load(f)
+            if "error" not in data:
+                # Already fully completed and written to disk from a previous run
+                return
+        except Exception:
+            pass
+
+    logger.info(f"Processing chunk {index}/{total}: {chunk_id}")
+
+    # 1. Calculate public hint (heuristic based on leading underscore)
+    symbol_name = chunk.get("symbol", chunk.get("name", "unknown"))
+    is_public_hint = not symbol_name.startswith("_")
 
     # 1. Format User Prompt
     try:
         user_prompt = CHUNK_SUMMARY_USER_PROMPT.format(
             chunk_id=chunk_id,
             file=chunk["file"],
-            symbol=chunk.get("symbol", chunk.get("name", "unknown")),
+            symbol=symbol_name,
             parent_class=chunk.get("parent_class", "null"),
             decorators=json.dumps(chunk.get("decorators", [])),
             chunk_type=chunk.get("chunk_type", "unknown"),
             language="python", # Hardcoding for now, could be passed dynamically
-            start_line=chunk.get("start_line", 0),
-            end_line=chunk.get("end_line", 0),
-            code=chunk["text"]
+            start_line=chunk.get("line_start", 0),
+            end_line=chunk.get("line_end", 0),
+            is_public_hint=is_public_hint,
+            code=chunk["chunk_text"]
         )
     except KeyError as e:
         logger.warning(f"KeyError formatting prompt for chunk_id {chunk_id}: {e}")
@@ -82,7 +96,7 @@ async def run_chunk_inference_async(config: RunConfig, repo_out_dir: str):
     """
     Asynchronous executor for all chunks in the repository.
     """
-    chunks_path = os.path.join(repo_out_dir, "chunks.jsonl")
+    chunks_path = os.path.join(repo_out_dir, "chunks", "chunks.jsonl")
     if not os.path.exists(chunks_path):
         logger.warning(f"chunks.jsonl not found at {chunks_path}. Skipping chunk inference.")
         return
@@ -106,12 +120,42 @@ async def run_chunk_inference_async(config: RunConfig, repo_out_dir: str):
     
     logger.info(f"Starting chunk inference for {len(chunks)} chunks with concurrency {config.inference_concurrency} ({config.chunk_model})...")
     
-    tasks = []
-    for chunk in chunks:
-        tasks.append(process_chunk(chunk, client, config, repo_out_dir, semaphore))
+    for pass_idx in range(1, 4):
+        # 1. Identify which chunks need processing (missing or error)
+        chunks_to_process = []
+        for chunk in chunks:
+            out_file = os.path.join(repo_out_dir, "summaries", "chunks", f"{chunk['chunk_id']}.json")
+            needs_work = True
+            if os.path.exists(out_file):
+                try:
+                    with open(out_file, "r") as f:
+                        data = json.load(f)
+                    if "error" not in data:
+                        needs_work = False
+                except Exception:
+                    pass
+            if needs_work:
+                chunks_to_process.append(chunk)
+
+        if not chunks_to_process:
+            if pass_idx > 1:
+                logger.info(f"All chunks successfully processed after pass {pass_idx-1}.")
+            break
+
+        if pass_idx > 1:
+            logger.info(f"Starting pass {pass_idx}/3 to retry {len(chunks_to_process)} failed/missing chunks...")
+
+        tasks = []
+        for i, chunk in enumerate(chunks_to_process, 1):
+            tasks.append(process_chunk(chunk, client, config, repo_out_dir, semaphore, i, len(chunks_to_process)))
+            
+        # Execute batch
+        results = await asyncio.gather(*tasks, return_exceptions=True)
         
-    # Execute batch
-    await asyncio.gather(*tasks, return_exceptions=True)
+        # Log any errors that occurred
+        for r in results:
+            if isinstance(r, Exception):
+                logger.error(f"Chunk task failed: {r}")
     
     logger.info("Chunk inference completed.")
 

@@ -23,7 +23,7 @@ DEFAULT_EMBEDDING_BATCH_SIZE = 16
 # Step 7: LLM Inference configuration
 DEFAULT_INFERENCE_API_KEY = os.environ.get("API_KEY")
 DEFAULT_INFERENCE_BASE_URL = os.environ.get("BASE_URL", "https://inference.api.nscale.com/v1")
-DEFAULT_INFERENCE_CONCURRENCY = 50
+DEFAULT_INFERENCE_CONCURRENCY = 10
 DEFAULT_CHUNK_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"
 DEFAULT_ARCH_MODEL = "Qwen/Qwen2.5-Coder-32B-Instruct"
 

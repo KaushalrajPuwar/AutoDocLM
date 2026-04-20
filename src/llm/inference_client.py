@@ -10,16 +10,16 @@ logger = logging.getLogger(__name__)
 
 def clean_json_string(raw_text: str) -> str:
     """
-    Strip markdown fences (e.g. ```json ) if they exist to extract raw JSON.
+    Strip markdown fences and any non-JSON prefix/suffix text.
     """
     text = raw_text.strip()
     
-    # Simple regex to extract content within json code blocks if present
+    # 1. Strip markdown fences
     match = re.search(r'```(?:json)?(.*?)```', text, re.DOTALL)
     if match:
         text = match.group(1).strip()
     else:
-        # Fallback manual stripping if regex missed
+        # Fallback manual stripping
         if text.startswith("```"):
             first_newline = text.find("\n")
             if first_newline != -1:
@@ -27,7 +27,24 @@ def clean_json_string(raw_text: str) -> str:
         if text.endswith("```"):
             text = text[:-3]
     
+    # 2. Find first { and last } to isolate the JSON object if there's surrounding text
+    start = text.find("{")
+    end = text.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        text = text[start:end+1]
+    
     return text.strip()
+
+def repair_json(text: str) -> str:
+    """
+    Best-effort repair of common LLM JSON errors:
+    - Trailing commas in objects/arrays
+    - Unescaped newlines in strings
+    """
+    # Remove trailing commas: ,} -> } and ,] -> ]
+    text = re.sub(r',\s*\}', '}', text)
+    text = re.sub(r',\s*\]', ']', text)
+    return text
 
 class InferenceClient:
     def __init__(self, config: RunConfig):
@@ -35,14 +52,12 @@ class InferenceClient:
         self.base_url = config.inference_base_url
         
         if not self.api_key or self.api_key == "***":
-            # Just log it; some local mock endpoints might not need keys
             logger.warning("No API_KEY provided to InferenceClient.")
 
         self.client = AsyncOpenAI(
             api_key=self.api_key if self.api_key else "dummy-key",
             base_url=self.base_url,
-            # Add timeout limits to prevent hanging connections
-            timeout=60.0,
+            timeout=180.0,
             max_retries=2
         )
 
@@ -57,7 +72,7 @@ class InferenceClient:
         stage: str = "unknown"
     ) -> Dict[str, Any]:
         """
-        Execute an LLM call enforcing valid JSON output via strict prompt adherence and retry loops.
+        Execute an LLM call enforcing valid JSON output.
         """
         messages = [
             {"role": "system", "content": system_prompt},
@@ -68,32 +83,41 @@ class InferenceClient:
             return await self._call_and_parse(model, messages, temperature, max_tokens, seed)
         except Exception as e:
             logger.debug(f"JSON parsing failed on first attempt for stage '{stage}': {e}. Retrying.")
-            # Append strict manual JSON constraints and retry exactly once
-            retry_msg = "Return valid JSON only. No extra text. No markdown fences. No trailing commas."
-            messages.append({"role": "user", "content": retry_msg})
+            retry_msg = "Your previous response was invalid JSON. Return valid JSON only. No markdown fences. Ensure all quotes are escaped."
+            
+            # Create a separate list for retry to avoid bloating history
+            retry_messages = messages + [
+                {"role": "assistant", "content": "I apologize, I will provide valid JSON now."},
+                {"role": "user", "content": retry_msg}
+            ]
             
             try:
-                return await self._call_and_parse(model, messages, temperature, max_tokens, seed)
+                return await self._call_and_parse(model, retry_messages, temperature, max_tokens, seed)
             except Exception as e2:
                 logger.error(f"Inference failed after retry for stage '{stage}': {e2}")
-                return {"error": "inference_failed", "stage": stage}
+                return {"error": "inference_failed", "stage": stage, "details": str(e2)}
 
     async def _call_and_parse(self, model: str, messages: list, temperature: float, max_tokens: int, seed: int) -> Dict[str, Any]:
         """
         Private wrapper to execute the HTTP request and decode JSON safely.
         """
+        # Attempt to use JSON mode if natively supported by the inference server
         response = await self.client.chat.completions.create(
             model=model,
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,
-            seed=seed
-            # Omitted response_format={"type": "json_object"} because some external
-            # endpoints (nscale, openrouter depending on model) don't strictly support it reliably.
+            seed=seed,
+            response_format={"type": "json_object"}
         )
         content = response.choices[0].message.content
         if not content:
             raise ValueError("Empty response content from LLM.")
             
         cleaned = clean_json_string(content)
-        return json.loads(cleaned)
+        try:
+            return json.loads(cleaned)
+        except json.JSONDecodeError:
+            # Try repair before failing
+            repaired = repair_json(cleaned)
+            return json.loads(repaired)

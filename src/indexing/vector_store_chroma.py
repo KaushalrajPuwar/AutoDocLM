@@ -203,23 +203,18 @@ def search_similar_chunks(
     ollama_model: str = "qwen3-embedding:0.6b",
     n_results: int = 5,
     file_filter: Optional[list[str]] = None,
+    exclude_filter: Optional[list[str]] = None,
 ) -> list[SearchResult]:
     """
     Retrieve the most semantically similar chunks to a query string.
 
     Args:
-        collection:   The ChromaDB collection to search.
-        query:        A natural language or code string to embed and search.
-        ollama_model: Ollama model used to embed the query (must match the
-                      model used during indexing).
-        n_results:    Maximum number of results to return.
-        file_filter:  If provided, restrict results to chunks from these
-                      relative file paths. Used by Step 7.3 to search
-                      within a specific folder's files only.
-
-    Returns:
-        List of SearchResult objects sorted by ascending cosine distance
-        (most similar first). Empty list if query embedding fails.
+        collection:     The ChromaDB collection to search.
+        query:          A natural language or code string to embed and search.
+        ollama_model:   Ollama model used to embed the query.
+        n_results:      Maximum number of results to return.
+        file_filter:    Inclusive: restrict results to these file paths.
+        exclude_filter: Exclusive: omit results from these file paths.
     """
     try:
         import ollama as _ollama
@@ -229,13 +224,25 @@ def search_similar_chunks(
         logger.warning(f"Failed to embed query for similarity search: {e}")
         return []
 
-    # Build ChromaDB where-filter for file restriction.
-    where: Optional[dict] = None
+    # Build ChromaDB where-filter
+    filters = []
     if file_filter:
         if len(file_filter) == 1:
-            where = {"file": {"$eq": file_filter[0]}}
+            filters.append({"file": {"$eq": file_filter[0]}})
         else:
-            where = {"file": {"$in": file_filter}}
+            filters.append({"file": {"$in": file_filter}})
+    
+    if exclude_filter:
+        if len(exclude_filter) == 1:
+            filters.append({"file": {"$ne": exclude_filter[0]}})
+        else:
+            filters.append({"file": {"$nin": exclude_filter}})
+
+    where: Optional[dict] = None
+    if len(filters) == 1:
+        where = filters[0]
+    elif len(filters) > 1:
+        where = {"$and": filters}
 
     # Clamp n_results to what is actually in the collection (after filtering)
     # to avoid ChromaDB errors when the collection is small.

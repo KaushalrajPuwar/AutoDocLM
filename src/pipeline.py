@@ -123,8 +123,23 @@ class Orchestrator:
         logger.info("=== STEP 7.1: Chunk Inference ===")
         from src.llm.chunk_inference import run_chunk_inference
         run_chunk_inference(self.config, str(self.project_dir))
-        
-        logger.info("Pipeline Steps 0–7.1 completed successfully.")
+
+        # Step 7.2: File-Level Inference
+        logger.info("=== STEP 7.2: File Inference ===")
+        from src.llm.file_inference import run_file_inference
+        run_file_inference(self.config, str(self.project_dir))
+
+        # Step 7.3: Folder/Component Inference (with RAG)
+        logger.info("=== STEP 7.3: Folder Inference ===")
+        from src.llm.folder_inference import run_folder_inference
+        run_folder_inference(self.config, str(self.project_dir))
+
+        # Step 7.4: Repo-Wide Architecture Inference
+        logger.info("=== STEP 7.4: Repo Architecture Inference ===")
+        from src.llm.repo_inference import run_repo_inference
+        run_repo_inference(self.config, str(self.project_dir))
+
+        logger.info("Pipeline Steps 0–7.4 completed successfully.")
 
     def run_static_analysis(self, repo_path: Path, classified_files_path: Path, chunks_path: Path):
         """Runs all static analysis modules."""

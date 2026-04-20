@@ -104,12 +104,11 @@ Create a `.env` file in the root directory to store your inference keys.
 
 ```bash
 # External API for Inference
-INFERENCE_API_KEY="sk-your-key-here"
-INFERENCE_BASE_URL="https://inference.api.nscale.com/v1"
-INFERENCE_MODEL="Qwen/Qwen2.5-Coder-32B-Instruct"
+API_KEY="your-key-here"
+BASE_URL="https://inference.api.nscale.com/v1"
 
 # Local Embeddings (Requires Ollama running locally)
-OLLAMA_EMBED_MODEL="qwen3-embedding:0.6b"
+DEFAULT_EMBEDDING_MODEL="qwen3-embedding:0.6b"
 ```
 
 ### 3️⃣ Running the Pipeline

@@ -122,8 +122,8 @@ class Orchestrator:
         centrality_path = analysis_dir / "centrality_scores.json"
         score_centrality(import_graph_path, centrality_path)
 
-        # 5.6: Folder Graphs
-        folder_graphs_path = analysis_dir / "folder_graphs"
+        # 5.6: Folder Graphs (single bundled JSON, not a directory)
+        folder_graphs_path = analysis_dir / "folder_graphs.json"
         extract_folder_graphs(import_graph_path, folder_graphs_path, repo_path)
 
         logger.info("Static analysis step completed.")

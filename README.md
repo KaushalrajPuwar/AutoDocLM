@@ -2,10 +2,11 @@
   <h1>AutoDocLM</h1>
 
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue?style=for-the-badge)](https://www.python.org/downloads/)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue?style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
+[![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=fff&style=for-the-badge)](https://www.python.org/downloads/)
 [![Ollama](https://img.shields.io/badge/Ollama-fff?logo=ollama&logoColor=000&style=for-the-badge)](https://ollama.com/)
+[![Qwen](https://custom-icon-badges.demolab.com/badge/Qwen-605CEC?logo=qwen&logoColor=fff&style=for-the-badge)](https://qwen.ai/home)
 [![NetworkX](https://img.shields.io/badge/NetworkX-005C8A?style=for-the-badge)](https://networkx.org/)
+[![ChromaDB](https://img.shields.io/badge/ChromaDB-6E44FF?logo=databricks&logoColor=fff&style=for-the-badge)](https://www.trychroma.com/)
 [![MkDocs](https://img.shields.io/badge/MkDocs-526CFE?logo=materialformkdocs&logoColor=fff&style=for-the-badge)](https://www.mkdocs.org/)
 
 > **Fully Automated, High-Fidelity Codebase Documentation Generator via LLM Inference and Graph Theory.**

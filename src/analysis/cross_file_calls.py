@@ -1,7 +1,25 @@
+"""
+Cross-File Call Extractor (Step 5.4).
+
+Builds a map of function calls that cross file boundaries, using:
+  Tier 1 — Python: ast CallVisitor
+  Tier 2 — JS/TS:  tree-sitter call_expression walker
+
+Key design decisions:
+- Module path conversion uses package_roots.file_to_module_path() so paths like
+  src/flask/globals.py are correctly mapped to flask.globals (not src.flask.globals).
+- The symbol map uses only EXACT full-path keys. The "dotted suffix cascade" that
+  registered every trailing suffix has been removed. This prevents namespace
+  flattening where commonly-named symbols like 'config' or 'utils' resolve to the
+  wrong file.
+- Unresolvable calls (external libraries) are silently skipped at DEBUG level.
+"""
 import ast
 import json
 import logging
 from pathlib import Path
+
+from src.analysis.package_roots import file_to_module_path
 
 logger = logging.getLogger(__name__)
 
@@ -9,9 +27,9 @@ _JS_EXTENSIONS = {".js", ".jsx", ".mjs", ".cjs"}
 _TS_EXTENSIONS = {".ts", ".tsx"}
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 # Tier 1: Python AST call extraction
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 
 class _PythonCallVisitor(ast.NodeVisitor):
     """
@@ -32,7 +50,7 @@ class _PythonCallVisitor(ast.NodeVisitor):
         self.generic_visit(node)
         self.current_function = prev
 
-    visit_AsyncFunctionDef = visit_FunctionDef  # handle async defs identically
+    visit_AsyncFunctionDef = visit_FunctionDef
 
     def visit_Call(self, node: ast.Call):
         if not self.current_function:
@@ -54,6 +72,7 @@ class _PythonCallVisitor(ast.NodeVisitor):
             call_name = ".".join(parts)
 
         if call_name:
+            # Resolve the leading name through the import alias map
             parts = call_name.split(".")
             if parts[0] in self.file_alias_map:
                 resolved_base = self.file_alias_map[parts[0]]
@@ -83,7 +102,10 @@ def _extract_python_calls(
                 if target_file and target_file != file_str:
                     if calling_fn not in result:
                         result[calling_fn] = {"calls": []}
-                    call_info = {"file": target_file, "function": symbol.split(".")[-1]}
+                    call_info = {
+                        "file": target_file,
+                        "function": symbol.split(".")[-1],
+                    }
                     if call_info not in result[calling_fn]["calls"]:
                         result[calling_fn]["calls"].append(call_info)
 
@@ -93,9 +115,9 @@ def _extract_python_calls(
     return result
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 # Tier 2: JS/TS tree-sitter call extraction
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 
 def _get_js_ts_language(suffix: str):
     """Lazy-load the appropriate tree-sitter Language object."""
@@ -138,16 +160,16 @@ def _extract_js_ts_calls(
         logger.warning(f"tree-sitter parse failed for {file_str}: {e}")
         return result
 
-    # Track current enclosing function name as we walk
     current_function: list[str | None] = [None]
 
     def walk(node):
-        # Enter a function definition
         if node.type in (
             "function_declaration", "function_expression",
             "arrow_function", "method_definition",
         ):
-            name_node = next((c for c in node.children if c.type == "identifier"), None)
+            name_node = next(
+                (c for c in node.children if c.type == "identifier"), None
+            )
             fn_name = name_node.text.decode("utf-8") if name_node else "<anonymous>"
             prev = current_function[0]
             current_function[0] = fn_name
@@ -156,7 +178,6 @@ def _extract_js_ts_calls(
             current_function[0] = prev
             return
 
-        # call_expression: e.g.  foo()  or  bar.baz()
         if node.type == "call_expression" and current_function[0]:
             fn_node = node.children[0] if node.children else None
             call_name: str | None = None
@@ -168,7 +189,6 @@ def _extract_js_ts_calls(
 
             if call_name:
                 parts = call_name.split(".")
-                # Resolve alias: e.g. `utils` -> `./utils.formatName`
                 if parts[0] in file_alias_map:
                     resolved_base = file_alias_map[parts[0]]
                     call_name = ".".join([resolved_base] + parts[1:])
@@ -178,7 +198,10 @@ def _extract_js_ts_calls(
                     fn = current_function[0]
                     if fn not in result:
                         result[fn] = {"calls": []}
-                    call_info = {"file": target_file, "function": call_name.split(".")[-1]}
+                    call_info = {
+                        "file": target_file,
+                        "function": call_name.split(".")[-1],
+                    }
                     if call_info not in result[fn]["calls"]:
                         result[fn]["calls"].append(call_info)
 
@@ -189,9 +212,9 @@ def _extract_js_ts_calls(
     return result
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 # Main entry point
-# ─────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 
 def extract_cross_file_calls(
     repo_path: Path,
@@ -200,11 +223,21 @@ def extract_cross_file_calls(
     output_path: Path,
 ):
     """
-    Extracts a map of function calls that cross file boundaries.
+    Build a map of function calls that cross file boundaries.
 
-    Tier 1 — Python: ast CallVisitor
-    Tier 2 — JS/TS:  tree-sitter call_expression walker
-    Tier 3 — Other:  skipped (too many false positives with regex)
+    The symbol map uses EXACT full-path module keys only. The "dotted suffix
+    cascade" approach (which registered every trailing suffix of a symbol to
+    handle Flask's src/ layout) has been removed. Module paths are now derived
+    correctly via file_to_module_path(), which strips the package root prefix so
+    that src/flask/globals.py produces key "flask.globals" directly — matching how
+    user code actually imports it.
+
+    Args:
+        repo_path:          Absolute path to the raw repository root.
+        chunks_path:        Path to chunks.jsonl.
+        import_graph_path:  Path to import_graph.json (must include alias_map
+                            and package_roots produced by build_import_graph).
+        output_path:        Path to write cross_file_calls.json.
     """
     logger.info("Starting cross-file call extraction...")
 
@@ -212,27 +245,14 @@ def extract_cross_file_calls(
         with open(import_graph_path, "r", encoding="utf-8") as f:
             import_graph_data = json.load(f)
         alias_map: dict[str, dict] = import_graph_data.get("alias_map", {})
+        package_roots: list[str] = import_graph_data.get("package_roots", ["."])
     except FileNotFoundError:
         logger.error(f"Import graph not found at {import_graph_path}")
         return
 
-    # ── Build a symbol → file map from chunks.jsonl ──────────────────────────
-    # For Python: "src.models.User" → "src/models.py"
-    # We also index EVERY dotted suffix so that alias-resolved calls like
-    # "flask.globals.g" resolve correctly even though the full path key is
-    # "src.flask.globals.g".
+    # Build symbol → file map using EXACT keys only
+    # Key format: "<module.path>.<SymbolName>" e.g. "flask.globals.g"
     symbol_map: dict[str, str] = {}
-
-    def _register(key: str, file_rel: str):
-        """Register a key and all of its dotted suffixes."""
-        symbol_map[key] = file_rel
-        parts = key.split(".")
-        for i in range(1, len(parts)):
-            suffix = ".".join(parts[i:])
-            # Only register the suffix if it's not already pointing at another file
-            # (i.e., don't clobber a more-specific match)
-            if suffix not in symbol_map:
-                symbol_map[suffix] = file_rel
 
     try:
         with open(chunks_path, "r", encoding="utf-8") as f:
@@ -245,15 +265,17 @@ def extract_cross_file_calls(
                     continue
 
                 if lang == "python":
-                    module_path = file_rel.replace(".py", "").replace("/", ".")
-                    full = f"{module_path}.{symbol}"
-                    _register(full, file_rel)
-                    _register(module_path, file_rel)  # module itself
+                    # Correctly derive module path respecting the package root
+                    module_path = file_to_module_path(file_rel, package_roots)
+                    full_key = f"{module_path}.{symbol}"
+                    symbol_map[full_key] = file_rel
+                    # Also register the bare module path → file for module-level calls
+                    if module_path not in symbol_map:
+                        symbol_map[module_path] = file_rel
 
                 elif lang in ("javascript", "typescript"):
-                    module_key = file_rel  # e.g. "src/utils.ts"
-                    _register(f"{module_key}.{symbol}", file_rel)
-                    # bare symbol name as fallback (lower priority)
+                    module_key = file_rel
+                    symbol_map[f"{module_key}.{symbol}"] = file_rel
                     if symbol not in symbol_map:
                         symbol_map[symbol] = file_rel
 
@@ -261,8 +283,7 @@ def extract_cross_file_calls(
         logger.error(f"Chunks file not found at {chunks_path}")
         return
 
-
-    # ── Iterate over every aliased file in the import graph ──────────────────
+    # Iterate over every aliased file in the import graph
     cross_calls: dict[str, dict] = {}
 
     for file_str, file_aliases in alias_map.items():
@@ -273,11 +294,15 @@ def extract_cross_file_calls(
         suffix = Path(file_str).suffix.lower()
 
         if suffix == ".py":
-            calls = _extract_python_calls(file_str, file_path, file_aliases, symbol_map)
+            calls = _extract_python_calls(
+                file_str, file_path, file_aliases, symbol_map
+            )
         elif suffix in _JS_EXTENSIONS | _TS_EXTENSIONS:
-            calls = _extract_js_ts_calls(file_str, file_path, file_aliases, symbol_map)
+            calls = _extract_js_ts_calls(
+                file_str, file_path, file_aliases, symbol_map
+            )
         else:
-            continue  # Tier 3 — skip
+            continue
 
         if calls:
             cross_calls[file_str] = calls

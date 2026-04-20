@@ -16,6 +16,9 @@ from src.config import RunConfig
 
 logger = logging.getLogger(__name__)
 
+# Isolation integrity markers — class chunks must NOT contain these
+_CLASS_LEAK_MARKERS = ("\ndef ", "\nasync def ")
+
 # Extension → parser tier routing
 _PYTHON_EXTS = {".py"}
 _JS_TS_EXTS = {".js", ".jsx", ".ts", ".tsx"}
@@ -34,6 +37,26 @@ def _route_file(file_path: Path, rel_path: str) -> List[Chunk]:
         return parse_js_ts_file(file_path, rel_path)
     else:
         return parse_fallback_file(file_path, rel_path)
+
+
+def _validate_isolation(chunks: List[Chunk], rel_path: str) -> None:
+    """
+    Structural integrity guard — warns if any class chunk still contains
+    method body text, which would mean the Subtractive Isolation failed.
+
+    This check is a permanent regression guard. It costs O(n * k) string
+    scans per file (negligible) and ensures the failure mode is never silent.
+    """
+    for chunk in chunks:
+        if chunk.chunk_type == "class":
+            for marker in _CLASS_LEAK_MARKERS:
+                if marker in chunk.chunk_text:
+                    logger.warning(
+                        f"[ISOLATION FAIL] Class chunk still contains method "
+                        f"body code (marker: {marker!r}): {chunk.chunk_id} "
+                        f"in {rel_path}"
+                    )
+                    break
 
 
 def chunk_repo(config: RunConfig, project_dir: Path) -> Path:
@@ -84,6 +107,8 @@ def chunk_repo(config: RunConfig, project_dir: Path) -> Path:
             except Exception as e:
                 logger.warning(f"Failed to parse {rel_path}: {e}")
                 continue
+
+            _validate_isolation(chunks, rel_path)
 
             for chunk in chunks:
                 # Guard against duplicate chunk IDs (e.g. same-named functions)

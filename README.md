@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>AutoDocLM</h1>
+  <h1>AutoDocLM</h1><h4>(Under Development)</h4>
 
 
 [![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=fff&style=for-the-badge)](https://www.python.org/downloads/)
@@ -130,9 +130,16 @@ uv run python main.py --repo-zip ./my_codebase.zip
 
 ## 🤝 Project State
 This project is currently under active development.
-* **Step 0-1:** ✅ Stable (Ingestion & CLI)
-* **Step 2-3:** ✅ Stable (Filtering & Classification)
-* **Step 4:** ✅ Stable (AST/Tree-sitter Chunking)
-* **Step 5-10:** 🏗 In Progress (Graph Auth & Inference)
+
+- ✅ **Step 1:** Repo Ingestion & CLI
+- ✅ **Step 2:** File Filtering
+- ✅ **Step 3:** File Classification
+- ✅ **Step 4:** AST & Tree-sitter Chunking
+- ✅ **Step 5:** Static Analysis (Import Graphs, Cross-File Calls, Centrality)
+- ⬜ **Step 6:** Embedding and ChromaDB Setup
+- ⬜ **Step 7:** LLM Inference
+- ⬜ **Step 8:** Doc Writing / Markdown Generation
+- ⬜ **Step 9:** Mermaid Diagram Generation
+- ⬜ **Step 10:** MkDocs & Site Build
 
 ---

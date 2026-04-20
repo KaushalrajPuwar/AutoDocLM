@@ -6,7 +6,7 @@
 [![Ollama](https://img.shields.io/badge/Ollama-fff?logo=ollama&logoColor=000&style=for-the-badge)](https://ollama.com/)
 [![Qwen](https://custom-icon-badges.demolab.com/badge/Qwen-605CEC?logo=qwen&logoColor=fff&style=for-the-badge)](https://qwen.ai/home)
 [![NetworkX](https://img.shields.io/badge/NetworkX-005C8A?style=for-the-badge)](https://networkx.org/)
-[![ChromaDB](https://img.shields.io/badge/ChromaDB-6E44FF?logo=databricks&logoColor=fff&style=for-the-badge)](https://www.trychroma.com/)
+[![ChromaDB](https://custom-icon-badges.demolab.com/badge/ChromaDB-1F2937?logo=chromadb&style=for-the-badge)](https://www.trychroma.com/)
 [![MkDocs](https://img.shields.io/badge/MkDocs-526CFE?logo=materialformkdocs&logoColor=fff&style=for-the-badge)](https://www.mkdocs.org/)
 
 > **Fully Automated, High-Fidelity Codebase Documentation Generator via LLM Inference and Graph Theory.**
@@ -51,7 +51,7 @@ graph TD
     
     subgraph "Phase 3: Semantic Synthesis"
         CS --> LLM[LLM Inference Queue]
-        LLM -.-> |"API Request"| Ext[External Provider: DeepSeek/OpenAI]
+        LLM -.-> |"API Request"| Ext[External Provider: nscale/Qwen]
         Ext -.-> |"Manifest"| LLM
     end
 
@@ -103,13 +103,13 @@ uv sync
 Create a `.env` file in the root directory to store your inference keys. 
 
 ```bash
-# External API for Inference (e.g., DeepSeek, Groq, OpenAI)
+# External API for Inference
 INFERENCE_API_KEY="sk-your-key-here"
-INFERENCE_BASE_URL="https://api.deepseek.com/v1"
-INFERENCE_MODEL="deepseek-coder"
+INFERENCE_BASE_URL="https://api.nscale.com/v1"
+INFERENCE_MODEL="Qwen/Qwen2.5-Coder-32B-Instruct"
 
 # Local Embeddings (Requires Ollama running locally)
-OLLAMA_EMBED_MODEL="nomic-embed-text"
+OLLAMA_EMBED_MODEL="qwen3-embedding:0.6b"
 ```
 
 ### 3️⃣ Running the Pipeline
@@ -136,7 +136,7 @@ This project is currently under active development.
 - ✅ **Step 3:** File Classification
 - ✅ **Step 4:** AST & Tree-sitter Chunking
 - ✅ **Step 5:** Static Analysis (Import Graphs, Cross-File Calls, Centrality)
-- ⬜ **Step 6:** Embedding and ChromaDB Setup
+- ✅ **Step 6:** Embedding and ChromaDB Setup
 - ⬜ **Step 7:** LLM Inference
 - ⬜ **Step 8:** Doc Writing / Markdown Generation
 - ⬜ **Step 9:** Mermaid Diagram Generation

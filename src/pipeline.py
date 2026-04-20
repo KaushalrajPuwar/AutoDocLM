@@ -118,7 +118,13 @@ class Orchestrator:
             logger.info("Step 6: Embeddings skipped (pass --use-embeddings to enable).")
 
         logger.info("Pipeline Steps 0–6 completed successfully.")
-        # Future steps will follow here.
+        
+        # Step 7: LLM Inference (7.1 Chunk Inference)
+        logger.info("=== STEP 7.1: Chunk Inference ===")
+        from src.llm.chunk_inference import run_chunk_inference
+        run_chunk_inference(self.config, str(self.project_dir))
+        
+        logger.info("Pipeline Steps 0–7.1 completed successfully.")
 
     def run_static_analysis(self, repo_path: Path, classified_files_path: Path, chunks_path: Path):
         """Runs all static analysis modules."""

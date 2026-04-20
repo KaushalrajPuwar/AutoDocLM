@@ -12,6 +12,9 @@ from src.config import (
     DEFAULT_MAX_FILES,
     DEFAULT_SKIP_LARGE_ASSETS,
     DEFAULT_USE_EMBEDDINGS,
+    DEFAULT_INFERENCE_API_KEY,
+    DEFAULT_INFERENCE_BASE_URL,
+    DEFAULT_INFERENCE_CONCURRENCY,
     RunConfig,
 )
 from src.pipeline import Orchestrator
@@ -32,6 +35,9 @@ def main():
     parser.add_argument("--skip-large-assets", action="store_true", default=DEFAULT_SKIP_LARGE_ASSETS, help="Skip large binary assets during analysis.")
     parser.add_argument("--embedding-model", type=str, default=DEFAULT_EMBEDDING_MODEL, help=f"Ollama embedding model name (default: {DEFAULT_EMBEDDING_MODEL}).")
     parser.add_argument("--embedding-batch-size", type=int, default=DEFAULT_EMBEDDING_BATCH_SIZE, help=f"Number of chunks per Ollama embedding call (default: {DEFAULT_EMBEDDING_BATCH_SIZE}).")
+    parser.add_argument("--inference-api-key", type=str, default=DEFAULT_INFERENCE_API_KEY, help="API key for inference provider (defaults to API_KEY env var).")
+    parser.add_argument("--inference-base-url", type=str, default=DEFAULT_INFERENCE_BASE_URL, help=f"Base URL for inference provider (default: {DEFAULT_INFERENCE_BASE_URL}).")
+    parser.add_argument("--inference-concurrency", type=int, default=DEFAULT_INFERENCE_CONCURRENCY, help=f"Max concurrent LLM requests (default: {DEFAULT_INFERENCE_CONCURRENCY}).")
     parser.add_argument("--force-clone", action="store_true", default=False, help="Force deletion and re-clone of existing raw_repo directory.")
 
     args = parser.parse_args()
@@ -54,6 +60,9 @@ def main():
         force_clone=args.force_clone,
         embedding_model=args.embedding_model,
         embedding_batch_size=args.embedding_batch_size,
+        inference_api_key=args.inference_api_key,
+        inference_base_url=args.inference_base_url,
+        inference_concurrency=args.inference_concurrency,
     )
 
     try:

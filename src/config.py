@@ -8,7 +8,13 @@ DEFAULT_MAX_CHUNKS = 2000
 DEFAULT_MAX_FILE_SIZE_KB = 300
 DEFAULT_INCLUDE_TESTS = False
 DEFAULT_SKIP_LARGE_ASSETS = True
-DEFAULT_USE_EMBEDDINGS = False
+DEFAULT_USE_EMBEDDINGS = True
+
+# Step 6: Embedding configuration
+# Model is fixed for this project (qwen3-embedding:0.6b, 1024-dim, 32K context).
+# If ever swapped, the ChromaDB collection must be deleted and rebuilt.
+DEFAULT_EMBEDDING_MODEL = "qwen3-embedding:0.6b"
+DEFAULT_EMBEDDING_BATCH_SIZE = 16
 
 @dataclass
 class RunConfig:
@@ -21,6 +27,8 @@ class RunConfig:
     use_embeddings: bool = DEFAULT_USE_EMBEDDINGS
     include_tests: bool = DEFAULT_INCLUDE_TESTS
     skip_large_assets: bool = DEFAULT_SKIP_LARGE_ASSETS
+    embedding_model: str = DEFAULT_EMBEDDING_MODEL
+    embedding_batch_size: int = DEFAULT_EMBEDDING_BATCH_SIZE
     force_clone: bool = False
 
     def model_dump(self):
@@ -35,4 +43,6 @@ class RunConfig:
             "include_tests": self.include_tests,
             "skip_large_assets": self.skip_large_assets,
             "force_clone": self.force_clone,
+            "embedding_model": self.embedding_model,
+            "embedding_batch_size": self.embedding_batch_size,
         }

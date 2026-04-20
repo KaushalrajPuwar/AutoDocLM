@@ -4,6 +4,8 @@ import sys
 from typing import Optional
 
 from src.config import (
+    DEFAULT_EMBEDDING_BATCH_SIZE,
+    DEFAULT_EMBEDDING_MODEL,
     DEFAULT_INCLUDE_TESTS,
     DEFAULT_MAX_CHUNKS,
     DEFAULT_MAX_FILE_SIZE_KB,
@@ -25,9 +27,11 @@ def main():
     parser.add_argument("--max-files", type=int, default=DEFAULT_MAX_FILES, help="Maximum number of files to process.")
     parser.add_argument("--max-chunks", type=int, default=DEFAULT_MAX_CHUNKS, help="Maximum number of chunks to extract.")
     parser.add_argument("--max-file-size-kb", type=int, default=DEFAULT_MAX_FILE_SIZE_KB, help="Maximum file size in KB to parse.")
-    parser.add_argument("--use-embeddings", action="store_true", default=DEFAULT_USE_EMBEDDINGS, help="Enable generating FAISS embeddings for retrieval.")
+    parser.add_argument("--use-embeddings", action="store_true", default=DEFAULT_USE_EMBEDDINGS, help="Enable generating ChromaDB chunk embeddings for retrieval (requires Ollama running locally).")
     parser.add_argument("--include-tests", action="store_true", default=DEFAULT_INCLUDE_TESTS, help="Include test files in graph analysis.")
     parser.add_argument("--skip-large-assets", action="store_true", default=DEFAULT_SKIP_LARGE_ASSETS, help="Skip large binary assets during analysis.")
+    parser.add_argument("--embedding-model", type=str, default=DEFAULT_EMBEDDING_MODEL, help=f"Ollama embedding model name (default: {DEFAULT_EMBEDDING_MODEL}).")
+    parser.add_argument("--embedding-batch-size", type=int, default=DEFAULT_EMBEDDING_BATCH_SIZE, help=f"Number of chunks per Ollama embedding call (default: {DEFAULT_EMBEDDING_BATCH_SIZE}).")
     parser.add_argument("--force-clone", action="store_true", default=False, help="Force deletion and re-clone of existing raw_repo directory.")
 
     args = parser.parse_args()
@@ -47,7 +51,9 @@ def main():
         use_embeddings=args.use_embeddings,
         include_tests=args.include_tests,
         skip_large_assets=args.skip_large_assets,
-        force_clone=args.force_clone
+        force_clone=args.force_clone,
+        embedding_model=args.embedding_model,
+        embedding_batch_size=args.embedding_batch_size,
     )
 
     try:

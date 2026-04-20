@@ -94,7 +94,30 @@ class Orchestrator:
         logger.info("=== STEP 5: Static Analysis ===")
         self.run_static_analysis(raw_repo_path, classified_path, chunks_path)
 
-        logger.info("Pipeline Steps 0–5 completed successfully.")
+        # Step 6: Embedding + Vector Index (Optional)
+        if self.config.use_embeddings:
+            logger.info("=== STEP 6: Embedding + Vector Index ===")
+            from src.indexing.vector_store_chroma import run_indexing
+            embeddings_dir = self.project_dir / "embeddings"
+            chunk_metadata_path = run_indexing(
+                chunks_path=chunks_path,
+                classified_files_path=classified_path,
+                embeddings_dir=embeddings_dir,
+                ollama_model=self.config.embedding_model,
+                batch_size=self.config.embedding_batch_size,
+                include_tests=self.config.include_tests,
+            )
+            if chunk_metadata_path:
+                logger.info(f"Step 6 complete. Metadata: {chunk_metadata_path}")
+            else:
+                logger.warning(
+                    "Step 6: Indexing returned None (Ollama unreachable). "
+                    "Continuing without embeddings."
+                )
+        else:
+            logger.info("Step 6: Embeddings skipped (pass --use-embeddings to enable).")
+
+        logger.info("Pipeline Steps 0–6 completed successfully.")
         # Future steps will follow here.
 
     def run_static_analysis(self, repo_path: Path, classified_files_path: Path, chunks_path: Path):

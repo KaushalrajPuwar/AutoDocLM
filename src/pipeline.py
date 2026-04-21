@@ -247,6 +247,14 @@ class Orchestrator:
         run_step_8(self.config, str(self.project_dir))
 
         logger.info("Pipeline Steps 0–8 completed successfully.")
+        
+        # Step 9: Diagram Generation
+        from src.diagrams.generator import run_diagram_generation
+        run_diagram_generation(self.project_dir)
+        
+        # Step 10: MkDocs Site Assembly
+        from src.site_build.builder import run_site_build
+        run_site_build(self.project_dir, self.repo_name)
 
     def run_static_analysis(self, repo_path: Path, classified_files_path: Path, chunks_path: Path):
         """Runs all static analysis modules."""

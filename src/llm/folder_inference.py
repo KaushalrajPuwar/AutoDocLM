@@ -179,8 +179,6 @@ def _inject_folder_evidence(
     chunks_dir = os.path.join(out_dir, "summaries", "chunks")
     
     # We need to know which chunks belong to which file
-    # This is slightly inefficient but given the scale of Step 7 (parallelized) it's acceptable
-    # For a real project we'd pass this in
     chunks_path = os.path.join(out_dir, "chunks", "chunks.jsonl")
     file_to_chunks = defaultdict(list)
     if os.path.exists(chunks_path):
@@ -312,8 +310,6 @@ async def process_folder(
         except Exception:
             pass
 
-    logger.info(f"Processing folder {index}/{total}: {folder_path}")
-
     # 1. Get valid file summaries for this folder
     valid_summaries = {fp: file_summaries[fp] for fp in folder_files if fp in file_summaries}
     if not valid_summaries:
@@ -367,15 +363,16 @@ async def process_folder(
         logger.warning(f"Prompt format error for folder {folder_path}: {e}")
         return
 
-    # 6. Cache check
+    # 8. Cache check
     c_key = get_cache_key(user_prompt, model, prompt_version)
     cached_data = read_cache(out_dir, stage, c_key)
 
     if cached_data:
         response_data = cached_data
     else:
-        # 7. Call LLM (32B, higher max_tokens for richer synthesis)
+        # 9. Call LLM (32B, higher max_tokens for richer synthesis)
         async with semaphore:
+            logger.info(f"Processing folder {index}/{total}: {folder_path}")
             response_data = await client.generate_json_async(
                 model=model,
                 system_prompt=FOLDER_SUMMARY_SYSTEM_PROMPT,
@@ -388,10 +385,11 @@ async def process_folder(
         if "error" not in response_data:
             write_cache(out_dir, stage, c_key, response_data)
 
-    # 8. Write output
+    # 10. Write output
     os.makedirs(os.path.dirname(out_file), exist_ok=True)
     with open(out_file, "w", encoding="utf-8") as f:
         json.dump(response_data, f, indent=2)
+    logger.info(f"Done folder {index}/{total}: {folder_path}")
 
 
 async def run_folder_inference_async(config: RunConfig, out_dir: str) -> None:
@@ -460,6 +458,7 @@ async def run_folder_inference_async(config: RunConfig, out_dir: str) -> None:
             if isinstance(r, Exception):
                 logger.error(f"Folder task failed: {r}")
     logger.info("Folder inference completed.")
+    await client.aclose()
 
 
 def run_folder_inference(config: RunConfig, out_dir: str) -> None:

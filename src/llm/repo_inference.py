@@ -366,6 +366,7 @@ def run_repo_inference(config: RunConfig, out_dir: str) -> None:
         )
         if "error" not in resp:
             write_cache(out_dir, stage, c_key, resp)
+        await client.aclose()
         return resp
 
     response_data = asyncio.run(_call_inference())

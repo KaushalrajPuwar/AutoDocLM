@@ -15,6 +15,8 @@ from src.config import (
     DEFAULT_INFERENCE_API_KEY,
     DEFAULT_INFERENCE_BASE_URL,
     DEFAULT_INFERENCE_CONCURRENCY,
+    DEFAULT_SERVE_HOST,
+    DEFAULT_SERVE_PORT,
     RunConfig,
 )
 from src.pipeline import Orchestrator
@@ -40,6 +42,9 @@ def main():
     parser.add_argument("--inference-api-key", type=str, default=DEFAULT_INFERENCE_API_KEY, help="API key for inference provider (defaults to API_KEY env var).")
     parser.add_argument("--inference-base-url", type=str, default=DEFAULT_INFERENCE_BASE_URL, help=f"Base URL for inference provider (default: {DEFAULT_INFERENCE_BASE_URL}).")
     parser.add_argument("--inference-concurrency", type=int, default=DEFAULT_INFERENCE_CONCURRENCY, help=f"Max concurrent LLM requests (default: {DEFAULT_INFERENCE_CONCURRENCY}).")
+    parser.add_argument("--no-serve-site", action="store_true", default=False, help="Do not host docs locally after Step 10 build.")
+    parser.add_argument("--serve-host", type=str, default=DEFAULT_SERVE_HOST, help=f"Host for local docs server (default: {DEFAULT_SERVE_HOST}).")
+    parser.add_argument("--serve-port", type=int, default=DEFAULT_SERVE_PORT, help=f"Port for local docs server (default: {DEFAULT_SERVE_PORT}).")
     parser.add_argument("--force-clone", action="store_true", default=False, help="Force deletion and re-clone of existing raw_repo directory.")
 
     args = parser.parse_args()
@@ -65,6 +70,9 @@ def main():
         inference_api_key=args.inference_api_key,
         inference_base_url=args.inference_base_url,
         inference_concurrency=args.inference_concurrency,
+        serve_site=not args.no_serve_site,
+        serve_host=args.serve_host,
+        serve_port=args.serve_port,
     )
 
     try:

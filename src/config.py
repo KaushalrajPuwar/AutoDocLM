@@ -28,6 +28,9 @@ DEFAULT_WRITING_CONCURRENCY = 10
 DEFAULT_CHUNK_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"
 DEFAULT_ARCH_MODEL = "Qwen/Qwen2.5-Coder-32B-Instruct"
 DEFAULT_WRITING_MODEL = "Qwen/Qwen2.5-Coder-32B-Instruct"
+DEFAULT_SERVE_SITE = True
+DEFAULT_SERVE_HOST = "127.0.0.1"
+DEFAULT_SERVE_PORT = 8000
 
 @dataclass
 class RunConfig:
@@ -49,6 +52,9 @@ class RunConfig:
     arch_model: str = DEFAULT_ARCH_MODEL
     writing_model: str = DEFAULT_WRITING_MODEL
     writing_concurrency: int = DEFAULT_WRITING_CONCURRENCY
+    serve_site: bool = DEFAULT_SERVE_SITE
+    serve_host: str = DEFAULT_SERVE_HOST
+    serve_port: int = DEFAULT_SERVE_PORT
     force_clone: bool = False
 
     def model_dump(self):
@@ -72,4 +78,7 @@ class RunConfig:
             "arch_model": self.arch_model,
             "writing_model": self.writing_model,
             "writing_concurrency": self.writing_concurrency,
+            "serve_site": self.serve_site,
+            "serve_host": self.serve_host,
+            "serve_port": self.serve_port,
         }

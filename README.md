@@ -16,17 +16,17 @@
 ---
 
 ## ⚡ Problem Statement: The Codebase Context Gap
-Understanding a large, legacy, or undocumented codebase is one of the most time-consuming tasks for any engineering team. Traditional documentation generators like Sphinx or JSDoc rely entirely on developers manually writing docstrings. When docstrings are missing, out of date, or lack architectural context, the generated documentation is functionally useless.
+Understanding a large, legacy, or undocumented codebase is one of the most time-consuming tasks for any engineering team. Traditional documentation generators like Sphinx or JSDoc rely entirely on developers manually writing docstrings. When docstrings are missing, out-of-date, or lack architectural context, the generated documentation is of limited practical value.
 
-**AutoDocLM** solves this by autonomously reverse-engineering your repository. By combining abstract syntax tree (AST) parsing, static dependency extraction, and PageRank-style graph centrality scoring, AutoDocLM identifies the most critical components of your system. It then feeds this structured telemetry into high-capability Large Language Models (LLMs) to natively generate a human-readable, beautifully structured MkDocs website.
+**AutoDocLM** solves this by autonomously reverse-engineering your repository. By combining abstract syntax tree (AST) parsing, static dependency extraction, and PageRank-style graph centrality scoring, AutoDocLM identifies the most critical components of your system. It then feeds this structured data into high-capability Large Language Models (LLMs) to natively generate a human-readable, beautifully structured MkDocs website.
 
 ---
 
 ## 📖 Overview
-AutoDocLM is a deterministic multi-stage pipeline designed to evaluate and document complex software architectures. It extracts raw code, isolates meaningful execution chunks, filters noise via graph theory, and leverages external LLM inference providers to synthesize deep architectural insights.
+AutoDocLM is a deterministic multi-stage pipeline designed to analyze and document complex software architectures. It extracts raw code, isolates meaningful execution chunks, filters noise using graph theory, and leverages external LLM inference providers to synthesize deep architectural insights.
 
 Unlike simple "summarize this file" tools, AutoDocLM measures **Structural Importance**:
-- **Semantic Chunking:** Files are physically broken into atomic functions and classes using language-native parsers (Python `ast`, `tree-sitter` for JS/TS) holding accurate qualified symbols and decorators.
+- **Semantic Chunking:** Files are physically broken into atomic functions and classes using language-native parsers (Python `ast`, `tree-sitter` for JS/TS) preserving accurate qualified symbols and decorators.
 - **Cross-File Call Graphs:** Resolves function calls across files to establish true execution dependencies, not just file-level imports.
 - **Centrality Scoring:** Enforces hard context limits by mathematically dropping "junk" or "utility" files that hold no weight in the primary import/call graph.
 
@@ -43,7 +43,7 @@ graph TD
     end
     
     subgraph "Phase 2: Graph Theory"
-        C --> S[Static Dependency Auth]
+        C --> S[Static Dependency Analysis]
         S --> IG[Import Graph Extraction]
         IG --> CG[Cross-File Call Graph]
         CG --> CS[PageRank Centrality Scoring]
@@ -56,7 +56,7 @@ graph TD
     end
 
     subgraph "Phase 4: Site Generation"
-        LLM --> MD[MkDocs Markdown Generaton]
+        LLM --> MD[MkDocs Markdown Generation]
         MD --> D[Mermaid Diagram Generation]
         D --> Output((MkDocs Site Build))
     end
@@ -68,10 +68,10 @@ graph TD
 | Stage Category | Description | Implementation Limits |
 | :--- | :--- | :--- |
 | **Ingestion** | Clones from Git URLs or extracts local `.zip` files. | Local storage limits apply. |
-| **Chunking** | Perfect docstring/decorator capture via Python `ast`. Tier 2 Tree-sitter for JS/TS. Tier 3 Heuristic Regex fallback for others. | Supported native: `.py`, `.js`, `.ts` |
-| **Call Graphs** | Infers parent-child execution loops across massive repos to determine architectural edges. | Max files: 200 (Centrality truncated) |
+| **Chunking** | Perfect docstring/decorator capture via Python `ast`. Tier 2: Tree-sitter for JS/TS. Tier 3 Heuristic Regex fallback for others. | Supported native: `.py`, `.js`, `.ts` |
+| **Call Graphs** | Infers parent-child execution relationships across massive repos to determine architectural edges. | Max files: 200 (Centrality truncated) |
 | **Inference Paradigm** | Completely decoupled from local GPUs. Target external providers via standard API URLs and keys. Local Ollama used only for deterministic Embeddings. | Dynamic context windowing. |
-| **Output** | Compiles a highly-aesthetic `MkDocs` Material themed static site deployment ready for Git Pages or S3. | - |
+| **Output** | Compiles a highly aesthetic `MkDocs` Material themed static site deployment-ready for GitHub Pages or S3. | - |
 
 > [!NOTE]
 > **API Setup:** We explicitly removed local Ollama requirements for the LLM task layer to drastically improve generation speed. You must provide a valid `API_KEY` and `BASE_URL` to an external inference endpoint.
@@ -118,11 +118,11 @@ Execute the pipeline against a public repository. The outputs will be generated 
 # Analyze an external Git repository
 uv run python main.py --repo-url https://github.com/username/repo.git
 
-# Generate documentation from a local zipped repository
+# Generate documentation from a local ZIP archive
 uv run python main.py --repo-zip ./my_codebase.zip
 ```
 
-After Step 10, AutoDocLM starts a local MkDocs server and prints a live localhost URL in the terminal.
+After Step 10, AutoDocLM starts a local MkDocs server and prints a local URL in the terminal.
 Press `Ctrl+G` in that terminal to stop the server and end the program.
 
 ```bash
@@ -135,7 +135,7 @@ uv run python main.py --repo-url https://github.com/username/repo.git --no-serve
 
 ---
 
-## 🤝 Team Mixture-Of-Experts
+## 🤝 Team Mixture Of Experts
 
 - [Kaushalraj Puwar](https://github.com/KaushalrajPuwar)
 - [Harsh Gupta](https://github.com/Reverent2005)
@@ -143,4 +143,4 @@ uv run python main.py --repo-url https://github.com/username/repo.git --no-serve
 - [Gautam Kappagal](https://github.com/GautamKappagal)
 
 ---
-Created with ❤️, tranformers, RAG, and fewer hallucinations
+Created with ❤️, Transformers, RAG, and fewer hallucinations

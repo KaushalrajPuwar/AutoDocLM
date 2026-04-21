@@ -248,14 +248,6 @@ class Orchestrator:
 
         logger.info("Pipeline Steps 0–8 completed successfully.")
         
-        # Step 9: Diagram Generation
-        from src.diagrams.generator import run_diagram_generation
-        run_diagram_generation(self.project_dir)
-        
-        # Step 10: MkDocs Site Assembly
-        from src.site_build.builder import run_site_build
-        run_site_build(self.project_dir, self.repo_name)
-
         # Step 9: Mermaid Diagram Generation (Deterministic)
         logger.info("=== STEP 9: Mermaid Diagram Generation ===")
         from src.docs.diagram_generator import run_step_9

@@ -38,13 +38,11 @@ async def process_chunk(
         except Exception:
             pass
 
-    logger.info(f"Processing chunk {index}/{total}: {chunk_id}")
-
     # 1. Calculate public hint (heuristic based on leading underscore)
     symbol_name = chunk.get("symbol", chunk.get("name", "unknown"))
     is_public_hint = not symbol_name.startswith("_")
 
-    # 1. Format User Prompt
+    # 2. Format User Prompt
     try:
         user_prompt = CHUNK_SUMMARY_USER_PROMPT.format(
             chunk_id=chunk_id,
@@ -63,15 +61,16 @@ async def process_chunk(
         logger.warning(f"KeyError formatting prompt for chunk_id {chunk_id}: {e}")
         return
 
-    # 2. Check Cache
+    # 3. Check Cache
     c_key = get_cache_key(user_prompt, model, prompt_version)
     cached_data = read_cache(out_dir, stage, c_key)
     
     if cached_data:
         response_data = cached_data
     else:
-        # 3. Call LLM with concurrency control
+        # 4. Call LLM with concurrency control
         async with semaphore:
+            logger.info(f"Processing chunk {index}/{total}: {chunk_id}")
             response_data = await client.generate_json_async(
                 model=model,
                 system_prompt=CHUNK_SUMMARY_SYSTEM_PROMPT,
@@ -86,10 +85,11 @@ async def process_chunk(
         if "error" not in response_data:
             write_cache(out_dir, stage, c_key, response_data)
 
-    # 4. Write final output file
+    # 5. Write final output file
     os.makedirs(os.path.dirname(out_file), exist_ok=True)
     with open(out_file, "w", encoding="utf-8") as f:
         json.dump(response_data, f, indent=2)
+    logger.info(f"Done chunk {index}/{total}: {chunk_id}")
 
 
 async def run_chunk_inference_async(config: RunConfig, repo_out_dir: str):
@@ -158,6 +158,7 @@ async def run_chunk_inference_async(config: RunConfig, repo_out_dir: str):
                 logger.error(f"Chunk task failed: {r}")
     
     logger.info("Chunk inference completed.")
+    await client.aclose()
 
 def run_chunk_inference(config: RunConfig, repo_out_dir: str):
     """

@@ -161,8 +161,6 @@ async def process_file(
         except Exception:
             pass
 
-    logger.info(f"Processing file {index}/{total}: {file_path}")
-
     # 1. Load chunk summaries for this file
     chunk_summaries = []
     chunks_dir = os.path.join(out_dir, "summaries", "chunks")
@@ -211,15 +209,16 @@ async def process_file(
         logger.warning(f"Prompt format error for file {file_path}: {e}")
         return
 
-    # 5. Cache check
+    # 6. Cache check
     c_key = get_cache_key(user_prompt, model, prompt_version)
     cached_data = read_cache(out_dir, stage, c_key)
 
     if cached_data:
         response_data = cached_data
     else:
-        # 6. Call LLM
+        # 7. Call LLM
         async with semaphore:
+            logger.info(f"Processing file {index}/{total}: {file_path}")
             response_data = await client.generate_json_async(
                 model=model,
                 system_prompt=FILE_SUMMARY_SYSTEM_PROMPT,
@@ -232,10 +231,11 @@ async def process_file(
         if "error" not in response_data:
             write_cache(out_dir, stage, c_key, response_data)
 
-    # 7. Write output
+    # 8. Write output
     os.makedirs(os.path.dirname(out_file), exist_ok=True)
     with open(out_file, "w", encoding="utf-8") as f:
         json.dump(response_data, f, indent=2)
+    logger.info(f"Done file {index}/{total}: {file_path}")
 
 
 async def run_file_inference_async(config: RunConfig, out_dir: str) -> None:
@@ -293,6 +293,7 @@ async def run_file_inference_async(config: RunConfig, out_dir: str) -> None:
             if isinstance(r, Exception):
                 logger.error(f"File task failed: {r}")
     logger.info("File inference completed.")
+    await client.aclose()
 
 
 def run_file_inference(config: RunConfig, out_dir: str) -> None:

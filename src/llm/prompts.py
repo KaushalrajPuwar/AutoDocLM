@@ -7,12 +7,12 @@ PROMPT_VERSION = {
     "file": "v2",
     "folder": "v2",
     "repo": "v2",
-    "write_file": "v2",
-    "write_folder": "v2",
-    "write_arch": "v2",
-    "write_setup": "v2",
-    "write_index": "v2",
-    "write_reference": "v1",
+    "write_file": "v5",
+    "write_folder": "v5",
+    "write_arch": "v5",
+    "write_setup": "v5",
+    "write_index": "v5",
+    "write_reference": "v5",
 }
 
 SHARED_HEADER = """You are a repository analysis assistant.
@@ -334,7 +334,7 @@ OFFICIAL DOCUMENTATION STYLE GUIDE:
 3. STRUCTURE: Every page MUST start with a 1-2 sentence overview/abstract.
 4. VISUALS:
    - Use Markdown Tables for technical references (API surfaces, symbols, or dependencies).
-   - Use GitHub/Material Admonitions strictly: [!TIP], [!NOTE], [!IMPORTANT], [!WARNING].
+   - Use native MkDocs/Material admonition blocks (e.g., "!!! tip", "!!! note", "!!! warning") to highlight high-value engineering insights. Do not use multiple blocks in a row just for the sake of it. Content must be indented by 4 spaces. Do not include any closing tags like "!!!" at the end of the block.
    - Use horizontal rules (---) to separate major conceptual sections.
 5. FACTUALITY:
    - If evidence is "unknown", write "Not confirmed in repository."
@@ -348,7 +348,7 @@ FILE_WRITE_USER_PROMPT = """Write a documentation page for the following source 
 RULES:
 - Focus on the "Internal Logic & Control Flow": explain the lifecycle of a call within this file.
 - Describe the "Dependency Rationale": why does this file rely on its specific imports?
-- Use role-based admonitions: [!WARNING] for core/infra files, [!TIP] for utilities/helpers.
+- Selectively use an admonition (tip, note, or warning) only if there is a non-obvious engineering insight or critical technical detail to share. Avoid generic descriptions.
 - Follow the Official Documentation Style Guide.
 
 FILE SUMMARY JSON:

@@ -61,6 +61,10 @@ class InferenceClient:
             max_retries=2
         )
 
+    async def aclose(self):
+        """Explicitly close the underlying HTTP client before the event loop shuts down."""
+        await self.client.close()
+
     async def generate_json_async(
         self,
         model: str,

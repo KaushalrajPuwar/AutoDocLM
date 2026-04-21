@@ -56,7 +56,7 @@ class MarkdownWriter:
 
         logger.info(f"Step 8 complete. Documentation available at: {self.docs_dir}")
 
-    async def _write_prose(self, stage: str, prompt_version: str, user_prompt: str, cache_input: str) -> str:
+    async def _write_prose(self, stage: str, prompt_version: str, user_prompt: str, cache_input: str, label: str = "") -> str:
         """Helper to manage caching and LLM calls for prose generation."""
         cache_key = get_cache_key(cache_input, self.config.writing_model, prompt_version)
         cached = read_cache(str(self.project_dir), stage, cache_key)
@@ -65,17 +65,16 @@ class MarkdownWriter:
             return cached["markdown"]
 
         async with self.semaphore:
+            # Log here — inside the semaphore — so the message appears exactly when
+            # the LLM call is about to be made, not when the task was merely queued.
+            if label:
+                logger.info(f"Calling LLM for: {label}")
             content = await self.client.generate_markdown_async(
                 model=self.config.writing_model,
                 system_prompt=WRITING_SYSTEM_PROMPT_HEADER,
                 user_prompt=user_prompt,
                 stage=stage
             )
-            
-            # Post-process for "unknown" safety
-            if "unknown" in content.lower() and "not confirmed in repository" not in content.lower():
-                # The prompt rule should handle this, but we can do a best-effort replacement if needed.
-                pass
 
             write_cache(str(self.project_dir), stage, cache_key, {"markdown": content})
             return content
@@ -98,7 +97,9 @@ class MarkdownWriter:
         tasks = []
         for summary_file in summaries_dir.glob("*.json"):
             tasks.append(self._generate_single_file_page(summary_file))
+        logger.info(f"Queued {len(tasks)} file doc tasks.")
         await asyncio.gather(*tasks)
+        logger.info("All file doc tasks complete.")
 
     async def _generate_single_file_page(self, summary_path: Path):
         with open(summary_path, 'r', encoding='utf-8') as f:
@@ -109,11 +110,8 @@ class MarkdownWriter:
         out_path = self.docs_dir / "files" / safe_name
 
         if out_path.exists():
-            logger.info(f"File doc already exists: {safe_name}. Skipping.")
-            return
+            return  # Already done
 
-        logger.info(f"Generating file doc: {rel_path}")
-        
         user_prompt = FILE_WRITE_USER_PROMPT.format(
             file_summary_json=json.dumps(summary_json, indent=2)
         )
@@ -122,11 +120,13 @@ class MarkdownWriter:
             stage="write_file",
             prompt_version=PROMPT_VERSION["write_file"],
             user_prompt=user_prompt,
-            cache_input=json.dumps(summary_json)
+            cache_input=json.dumps(summary_json),
+            label=f"file doc: {rel_path}"
         )
         
         with open(out_path, 'w', encoding='utf-8') as f:
             f.write(content)
+        logger.info(f"Written file doc: {rel_path}")
 
     async def generate_folder_pages(self):
         """Generate documentation for every module summary found."""
@@ -138,7 +138,9 @@ class MarkdownWriter:
         tasks = []
         for summary_file in summaries_dir.glob("*.json"):
             tasks.append(self._generate_single_folder_page(summary_file))
+        logger.info(f"Queued {len(tasks)} module doc tasks.")
         await asyncio.gather(*tasks)
+        logger.info("All module doc tasks complete.")
 
     async def _generate_single_folder_page(self, summary_path: Path):
         with open(summary_path, 'r', encoding='utf-8') as f:
@@ -149,10 +151,7 @@ class MarkdownWriter:
         out_path = self.docs_dir / "modules" / safe_name
 
         if out_path.exists():
-            logger.info(f"Module doc already exists: {safe_name}. Skipping.")
-            return
-
-        logger.info(f"Generating module doc: {folder_path}")
+            return  # Already done
 
         # GATHER CHILD FILE SUMMARIES
         child_summaries = []
@@ -183,11 +182,13 @@ class MarkdownWriter:
             stage="write_folder",
             prompt_version=PROMPT_VERSION["write_folder"],
             user_prompt=user_prompt,
-            cache_input=json.dumps(summary_json) + json.dumps(child_summaries)
+            cache_input=json.dumps(summary_json) + json.dumps(child_summaries),
+            label=f"module doc: {folder_path}"
         )
         
         with open(out_path, 'w', encoding='utf-8') as f:
             f.write(content)
+        logger.info(f"Written module doc: {folder_path}")
 
     async def generate_architecture_page(self):
         """Generate the main architecture overview page."""
@@ -196,7 +197,6 @@ class MarkdownWriter:
             logger.info("Architecture doc already exists: architecture.md. Skipping.")
             return
 
-        logger.info("Generating architecture doc: architecture.md")
         summary_path = self.project_dir / "summaries" / "repo_architecture.json"
         if not summary_path.exists():
             logger.warning("Repo architecture summary not found. Skipping architecture page.")
@@ -205,20 +205,15 @@ class MarkdownWriter:
         with open(summary_path, 'r', encoding='utf-8') as f:
             arch_json = json.load(f)
 
-        # GATHER TOP-CENTRAlITY MODULES
+        # GATHER TOP-CENTRALITY MODULES
         top_modules = []
         try:
             centrality_path = self.project_dir / "analysis" / "centrality_scores.json"
             if centrality_path.exists():
                 with open(centrality_path, 'r', encoding='utf-8') as f:
                     scores = json.load(f)
-                # scores is traditionally a list or dict of {file: score}
-                # But Step 7.3 folder inference already worked on them.
-                # Let's just get the top 10 from summaries/modules
                 mod_dir = self.project_dir / "summaries" / "modules"
                 if mod_dir.exists():
-                    # We'll just take the top 10 by file size or name for now if scores are hard to parse
-                    # Actually, let's just take all module summaries if there are < 15, or top 10.
                     all_mods = list(mod_dir.glob("*.json"))
                     all_mods.sort(key=lambda x: os.path.getsize(x), reverse=True)
                     for m_path in all_mods[:10]:
@@ -237,11 +232,13 @@ class MarkdownWriter:
             stage="write_arch",
             prompt_version=PROMPT_VERSION["write_arch"],
             user_prompt=user_prompt,
-            cache_input=json.dumps(arch_json) + json.dumps(top_modules)
+            cache_input=json.dumps(arch_json) + json.dumps(top_modules),
+            label="architecture doc"
         )
         
         with open(self.docs_dir / "architecture.md", 'w', encoding='utf-8') as f:
             f.write(content)
+        logger.info("Written architecture doc.")
 
     async def generate_setup_page(self):
         """Generate setup and installation documentation."""
@@ -250,7 +247,6 @@ class MarkdownWriter:
             logger.info("Setup doc already exists: setup.md. Skipping.")
             return
 
-        logger.info("Generating setup doc: setup.md")
         # Evidence Gathering
         analysis_dir = self.project_dir / "analysis"
         
@@ -295,11 +291,13 @@ class MarkdownWriter:
             stage="write_setup",
             prompt_version=PROMPT_VERSION["write_setup"],
             user_prompt=user_prompt,
-            cache_input=user_prompt
+            cache_input=user_prompt,
+            label="setup doc"
         )
         
         with open(self.docs_dir / "setup.md", 'w', encoding='utf-8') as f:
             f.write(content)
+        logger.info("Written setup doc.")
 
     async def generate_reference_page(self):
         """Generate a site map / reference page of all docs."""
@@ -308,8 +306,6 @@ class MarkdownWriter:
             logger.info("Reference doc already exists: reference.md. Skipping.")
             return
 
-        logger.info("Generating reference doc: reference.md")
-        
         doc_pages = []
         
         # 1. Gather Modules with Roles
@@ -354,13 +350,15 @@ class MarkdownWriter:
         )
         
         # Use a higher max_tokens for the reference page to avoid truncation
-        content = await self.client.generate_markdown_async(
-            model=self.config.writing_model,
-            system_prompt=WRITING_SYSTEM_PROMPT_HEADER,
-            user_prompt=user_prompt,
-            max_tokens=4096, # Explicitly high for the full index
-            stage="write_reference"
-        )
+        logger.info("Calling LLM for: reference doc")
+        async with self.semaphore:
+            content = await self.client.generate_markdown_async(
+                model=self.config.writing_model,
+                system_prompt=WRITING_SYSTEM_PROMPT_HEADER,
+                user_prompt=user_prompt,
+                max_tokens=4096, # Explicitly high for the full index
+                stage="write_reference"
+            )
         
         # Cache management (Manual since we bypassed _write_prose for max_tokens)
         cache_key = get_cache_key("\n".join(doc_pages), self.config.writing_model, PROMPT_VERSION["write_reference"])
@@ -368,6 +366,7 @@ class MarkdownWriter:
         
         with open(self.docs_dir / "reference.md", 'w', encoding='utf-8') as f:
             f.write(content)
+        logger.info("Written reference doc.")
 
     async def generate_index_page(self):
         """Generate the homepage / index overview doc."""
@@ -376,7 +375,6 @@ class MarkdownWriter:
             logger.info("Index doc already exists: index.md. Skipping.")
             return
 
-        logger.info("Generating index doc: index.md")
         arch_path = self.project_dir / "summaries" / "repo_architecture.json"
         arch_json = {}
         if arch_path.exists():
@@ -404,16 +402,19 @@ class MarkdownWriter:
             stage="write_index",
             prompt_version=PROMPT_VERSION["write_index"],
             user_prompt=user_prompt,
-            cache_input=json.dumps(arch_json)
+            cache_input=json.dumps(arch_json),
+            label="index doc"
         )
         
         with open(self.docs_dir / "index.md", 'w', encoding='utf-8') as f:
             f.write(content)
+        logger.info("Written index doc.")
 
 def run_step_8(config: RunConfig, project_dir: str):
     """Entry point for Step 8 (Synchronous wrapper)."""
     async def _run():
         writer = MarkdownWriter(config, project_dir)
         await writer.run()
+        await writer.client.aclose()
     
     asyncio.run(_run())

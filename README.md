@@ -143,3 +143,4 @@ uv run python main.py --repo-url https://github.com/username/repo.git --no-serve
 - [Gautam Kappagal](https://github.com/GautamKappagal)
 
 ---
+Created with ❤️, tranformers, RAG, and fewer hallucinations

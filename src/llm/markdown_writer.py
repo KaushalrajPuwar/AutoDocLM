@@ -30,35 +30,31 @@ class MarkdownWriter:
         self.semaphore = asyncio.Semaphore(config.writing_concurrency)
 
     async def run(self):
-        """Orchestrate the documentation writing process."""
+        """Orchestrate the documentation writing process in a logical bottom-up sequence."""
         logger.info("Starting Step 8: Markdown Documentation Writing")
         self.docs_dir.mkdir(parents=True, exist_ok=True)
         (self.docs_dir / "files").mkdir(exist_ok=True)
         (self.docs_dir / "modules").mkdir(exist_ok=True)
 
-        tasks = []
+        # 1. Base Layer: Files and Modules (Building Blocks)
+        # Running these in parallel as base evidence
+        await asyncio.gather(
+            self.generate_file_pages(),
+            self.generate_folder_pages()
+        )
 
-        # 8.1: File Docs
-        tasks.append(self.generate_file_pages())
+        # 2. Synthesis Layer: High-level overviews
+        # These logically depend on the components above being settled
+        await asyncio.gather(
+            self.generate_architecture_page(),
+            self.generate_setup_page()
+        )
 
-        # 8.2: Folder Docs
-        tasks.append(self.generate_folder_pages())
-
-        # 8.3: Architecture Overview
-        tasks.append(self.generate_architecture_page())
-
-        # 8.4: Setup / Installation
-        tasks.append(self.generate_setup_page())
-
-        await asyncio.gather(*tasks)
-
-        # 8.5: Reference Page (Site Map)
+        # 3. Navigation Layer: Site structure and entry
         await self.generate_reference_page()
-
-        # 8.6: Homepage / Index (Depends on knowing which pages were generated)
         await self.generate_index_page()
 
-        logger.info(f"Step 8 complete. Documentation generated at: {self.docs_dir}")
+        logger.info(f"Step 8 complete. Documentation available at: {self.docs_dir}")
 
     async def _write_prose(self, stage: str, prompt_version: str, user_prompt: str, cache_input: str) -> str:
         """Helper to manage caching and LLM calls for prose generation."""
@@ -108,8 +104,15 @@ class MarkdownWriter:
         with open(summary_path, 'r', encoding='utf-8') as f:
             summary_json = json.load(f)
         
-        file_path = summary_json.get("file", summary_path.stem)
-        logger.info(f"Generating file doc: {file_path}")
+        rel_path = summary_json.get("file", "unknown")
+        safe_name = self._get_safe_filename(rel_path)
+        out_path = self.docs_dir / "files" / safe_name
+
+        if out_path.exists():
+            logger.info(f"File doc already exists: {safe_name}. Skipping.")
+            return
+
+        logger.info(f"Generating file doc: {rel_path}")
         
         user_prompt = FILE_WRITE_USER_PROMPT.format(
             file_summary_json=json.dumps(summary_json, indent=2)
@@ -122,8 +125,6 @@ class MarkdownWriter:
             cache_input=json.dumps(summary_json)
         )
         
-        safe_name = self._get_safe_filename(file_path)
-        out_path = self.docs_dir / "files" / safe_name
         with open(out_path, 'w', encoding='utf-8') as f:
             f.write(content)
 
@@ -143,7 +144,14 @@ class MarkdownWriter:
         with open(summary_path, 'r', encoding='utf-8') as f:
             summary_json = json.load(f)
         
-        folder_path = summary_json.get("folder", summary_path.stem)
+        folder_path = summary_json.get("folder", "unknown")
+        safe_name = self._get_safe_folder_name(folder_path)
+        out_path = self.docs_dir / "modules" / safe_name
+
+        if out_path.exists():
+            logger.info(f"Module doc already exists: {safe_name}. Skipping.")
+            return
+
         logger.info(f"Generating module doc: {folder_path}")
 
         # GATHER CHILD FILE SUMMARIES
@@ -178,13 +186,16 @@ class MarkdownWriter:
             cache_input=json.dumps(summary_json) + json.dumps(child_summaries)
         )
         
-        safe_name = self._get_safe_folder_name(folder_path)
-        out_path = self.docs_dir / "modules" / safe_name
         with open(out_path, 'w', encoding='utf-8') as f:
             f.write(content)
 
     async def generate_architecture_page(self):
         """Generate the main architecture overview page."""
+        out_path = self.docs_dir / "architecture.md"
+        if out_path.exists():
+            logger.info("Architecture doc already exists: architecture.md. Skipping.")
+            return
+
         logger.info("Generating architecture doc: architecture.md")
         summary_path = self.project_dir / "summaries" / "repo_architecture.json"
         if not summary_path.exists():
@@ -234,6 +245,11 @@ class MarkdownWriter:
 
     async def generate_setup_page(self):
         """Generate setup and installation documentation."""
+        out_path = self.docs_dir / "setup.md"
+        if out_path.exists():
+            logger.info("Setup doc already exists: setup.md. Skipping.")
+            return
+
         logger.info("Generating setup doc: setup.md")
         # Evidence Gathering
         analysis_dir = self.project_dir / "analysis"
@@ -286,7 +302,12 @@ class MarkdownWriter:
             f.write(content)
 
     async def generate_reference_page(self):
-        """Generate a complete technical reference index (site map) with grounded roles."""
+        """Generate a site map / reference page of all docs."""
+        out_path = self.docs_dir / "reference.md"
+        if out_path.exists():
+            logger.info("Reference doc already exists: reference.md. Skipping.")
+            return
+
         logger.info("Generating reference doc: reference.md")
         
         doc_pages = []
@@ -349,7 +370,12 @@ class MarkdownWriter:
             f.write(content)
 
     async def generate_index_page(self):
-        """Generate the landing page for the site."""
+        """Generate the homepage / index overview doc."""
+        out_path = self.docs_dir / "index.md"
+        if out_path.exists():
+            logger.info("Index doc already exists: index.md. Skipping.")
+            return
+
         logger.info("Generating index doc: index.md")
         arch_path = self.project_dir / "summaries" / "repo_architecture.json"
         arch_json = {}

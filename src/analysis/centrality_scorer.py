@@ -13,6 +13,10 @@ import logging
 from pathlib import Path
 
 import networkx as nx
+try:
+    import scipy.sparse
+except ImportError:
+    pass
 
 logger = logging.getLogger(__name__)
 

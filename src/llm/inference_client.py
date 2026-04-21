@@ -97,6 +97,41 @@ class InferenceClient:
                 logger.error(f"Inference failed after retry for stage '{stage}': {e2}")
                 return {"error": "inference_failed", "stage": stage, "details": str(e2)}
 
+    async def generate_markdown_async(
+        self,
+        model: str,
+        system_prompt: str,
+        user_prompt: str,
+        temperature: float = 0.4,
+        max_tokens: int = 4096,
+        seed: int = 42,
+        stage: str = "unknown"
+    ) -> str:
+        """
+        Execute an LLM call to generate raw Markdown/text prose.
+        No JSON structure is enforced.
+        """
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+        
+        try:
+            response = await self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                seed=seed
+            )
+            content = response.choices[0].message.content
+            if not content:
+                raise ValueError("Empty response content from LLM.")
+            return content
+        except Exception as e:
+            logger.error(f"Markdown inference failed for stage '{stage}': {e}")
+            return f"# Error: Inference Failed\n\nStage: {stage}\nDetails: {str(e)}"
+
     async def _call_and_parse(self, model: str, messages: list, temperature: float, max_tokens: int, seed: int) -> Dict[str, Any]:
         """
         Private wrapper to execute the HTTP request and decode JSON safely.

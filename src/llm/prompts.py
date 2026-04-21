@@ -7,11 +7,12 @@ PROMPT_VERSION = {
     "file": "v2",
     "folder": "v2",
     "repo": "v2",
-    "write_file": "v1",
-    "write_folder": "v1",
-    "write_arch": "v1",
-    "write_setup": "v1",
-    "write_index": "v1",
+    "write_file": "v2",
+    "write_folder": "v2",
+    "write_arch": "v2",
+    "write_setup": "v2",
+    "write_index": "v2",
+    "write_reference": "v1",
 }
 
 SHARED_HEADER = """You are a repository analysis assistant.
@@ -315,4 +316,123 @@ IMPORTANT:
 - Do not invent files, folders, or commands not present in evidence.
 - If unsure about any field, output "unknown" and add to unknowns list.
 - Return valid JSON only. No extra text. No markdown fences. No trailing commas.
+"""
+# ---------------------------------------------------------------------------
+# Step 8 — Documentation Writing (Markdown Generation)
+# Model: Qwen/Qwen2.5-Coder-32B-Instruct  |  temperature: 0.4
+# ---------------------------------------------------------------------------
+
+WRITING_SYSTEM_PROMPT_HEADER = """You are a Lead Technical Writer at a top-tier software company. 
+TASK: Generate official, high-quality documentation that explains the MECHANICS and LOGIC of the repository.
+
+OFFICIAL DOCUMENTATION STYLE GUIDE:
+1. PERSONA: Authoritative, objective, and deeply technical. Explain HOW and WHY things work, not just WHAT they are.
+2. NARRATIVE SYNTHESIS: 
+   - Avoid literal translation of JSON fields. 
+   - Weave specific file/folder names into the prose as anchors for architectural concepts.
+   - Forbid repetitive lists of "Important Files" or "Important Folders". Use conceptual headings instead (e.g., "The Request Pipeline").
+3. STRUCTURE: Every page MUST start with a 1-2 sentence overview/abstract.
+4. VISUALS:
+   - Use Markdown Tables for technical references (API surfaces, symbols, or dependencies).
+   - Use GitHub/Material Admonitions strictly: [!TIP], [!NOTE], [!IMPORTANT], [!WARNING].
+   - Use horizontal rules (---) to separate major conceptual sections.
+5. FACTUALITY:
+   - If evidence is "unknown", write "Not confirmed in repository."
+   - Ground all claims in the provided technical summaries.
+
+Return Markdown ONLY. Do not include markdown fences around the entire response.
+"""
+
+FILE_WRITE_USER_PROMPT = """Write a documentation page for the following source file.
+
+RULES:
+- Focus on the "Internal Logic & Control Flow": explain the lifecycle of a call within this file.
+- Describe the "Dependency Rationale": why does this file rely on its specific imports?
+- Use role-based admonitions: [!WARNING] for core/infra files, [!TIP] for utilities/helpers.
+- Follow the Official Documentation Style Guide.
+
+FILE SUMMARY JSON:
+{file_summary_json}
+"""
+
+FOLDER_WRITE_USER_PROMPT = """Write a documentation page describing this folder/module as a system component.
+
+RULES:
+- Focus on "Internal Synergy": Explain how the files within this folder collaborate.
+- Define the "Module Contract": How should external components interact with this subsystem?
+- Link the narrative to the `component_graph` visual (assume it exists in the final site).
+- Follow the Official Documentation Style Guide.
+
+MODULE SUMMARY JSON:
+{module_summary_json}
+
+CHILD FILE SUMMARIES (Use for collaboration mapping):
+{file_summaries_json}
+"""
+
+ARCH_WRITE_USER_PROMPT = """Write the repository Architecture Overview documentation page.
+
+RULES:
+- This is a CONCEPTUAL guide. Explain the design philosophy and execution lifecycle.
+- Group folders into narrative "Subsystems" (e.g., "The Core Registry", "The Execution Engine").
+- **STRICTLY FORBIDDEN**: Do not create a separate section or table titled "Important Files" or "Important Folders". Use them as anchors within the subsystem narratives.
+- Include a "Design Philosophy" section: reason about why the {architecture_style} style was chosen.
+- Follow the Official Documentation Style Guide.
+
+REPO ARCHITECTURE JSON:
+{repo_architecture_json}
+
+TOP-CENTRALITY MODULE SUMMARIES (Use for deep subsystem synthesis):
+{top_module_summaries_json}
+"""
+
+SETUP_WRITE_USER_PROMPT = """Generate a professional Setup and Usage guide for this repository.
+
+RULES:
+- Focus on "Time to First Run": prioritize a clean Quick Start section.
+- Clearly label any inferred commands with "(inferred — verify before use)".
+- If build files (Dockerfile/Makefile) exist, explain their specific role in the setup.
+- Follow the Official Documentation Style Guide.
+
+ENTRYPOINT INFO:
+{entrypoints_json}
+
+DEPENDENCIES:
+{dependencies_json}
+
+README CONTENT (if available):
+{readme_text}
+
+BUILD FILE CONTENT (Dockerfile/Makefile if available):
+{build_file_text}
+"""
+
+INDEX_WRITE_USER_PROMPT = """Write the landing page (index.md) for this documentation site.
+
+RULES:
+- This is a professional product landing page. 
+- Highlight three primary entry points:
+  1. [Getting Started](setup.md) — For installation and quick run.
+  2. [Architecture Overview](architecture.md) — For design philosophy and subsystems.
+  3. [Technical Reference](reference.md) — For a comprehensive list of all modules and files.
+- Include a brief "Project Mission Statement" based on architectural evidence.
+- Follow the Official Documentation Style Guide.
+
+REPO ARCHITECTURE JSON:
+{repo_architecture_json}
+"""
+
+REFERENCE_WRITE_USER_PROMPT = """Write a comprehensive Technical Reference index page (reference.md).
+
+RULES:
+- This page is a complete site map/index for the documentation.
+- Group documentation links by folder/module.
+- For every entry (Module or File), include a concise 1-sentence "Role" blurb based ON THE PROVIDED METADATA.
+- Use the provided "Role: [description]" as the source of truth for these blurbs.
+- Use relative links (e.g. `[src/flask/app.py](files/src__flask__app.md)`).
+- Ensure NO entries are skipped. The page must be exhaustive.
+- Follow the Official Documentation Style Guide (use tables or structured lists).
+
+AVAILABLE DOC PAGES WITH ROLES:
+{doc_pages_list}
 """

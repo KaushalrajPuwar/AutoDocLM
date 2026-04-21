@@ -141,6 +141,13 @@ class Orchestrator:
 
         logger.info("Pipeline Steps 0–7.4 completed successfully.")
 
+        # Step 8: Markdown Documentation Writing
+        logger.info("=== STEP 8: Markdown Documentation Writing ===")
+        from src.llm.markdown_writer import run_step_8
+        run_step_8(self.config, str(self.project_dir))
+
+        logger.info("Pipeline Steps 0–8 completed successfully.")
+
     def run_static_analysis(self, repo_path: Path, classified_files_path: Path, chunks_path: Path):
         """Runs all static analysis modules."""
         analysis_dir = self.project_dir / "analysis"

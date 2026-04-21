@@ -24,8 +24,10 @@ DEFAULT_EMBEDDING_BATCH_SIZE = 16
 DEFAULT_INFERENCE_API_KEY = os.environ.get("API_KEY")
 DEFAULT_INFERENCE_BASE_URL = os.environ.get("BASE_URL", "https://inference.api.nscale.com/v1")
 DEFAULT_INFERENCE_CONCURRENCY = 10
+DEFAULT_WRITING_CONCURRENCY = 10
 DEFAULT_CHUNK_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"
 DEFAULT_ARCH_MODEL = "Qwen/Qwen2.5-Coder-32B-Instruct"
+DEFAULT_WRITING_MODEL = "Qwen/Qwen2.5-Coder-32B-Instruct"
 
 @dataclass
 class RunConfig:
@@ -45,6 +47,8 @@ class RunConfig:
     inference_concurrency: int = DEFAULT_INFERENCE_CONCURRENCY
     chunk_model: str = DEFAULT_CHUNK_MODEL
     arch_model: str = DEFAULT_ARCH_MODEL
+    writing_model: str = DEFAULT_WRITING_MODEL
+    writing_concurrency: int = DEFAULT_WRITING_CONCURRENCY
     force_clone: bool = False
 
     def model_dump(self):
@@ -66,4 +70,6 @@ class RunConfig:
             "inference_concurrency": self.inference_concurrency,
             "chunk_model": self.chunk_model,
             "arch_model": self.arch_model,
+            "writing_model": self.writing_model,
+            "writing_concurrency": self.writing_concurrency,
         }

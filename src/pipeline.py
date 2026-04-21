@@ -248,6 +248,25 @@ class Orchestrator:
 
         logger.info("Pipeline Steps 0–8 completed successfully.")
 
+        # Step 9: Mermaid Diagram Generation (Deterministic)
+        logger.info("=== STEP 9: Mermaid Diagram Generation ===")
+        from src.docs.diagram_generator import run_step_9
+        run_step_9(self.config, str(self.project_dir))
+
+        logger.info("Pipeline Steps 0–9 completed successfully.")
+
+        # Step 10: MkDocs Assembly + Site Build
+        logger.info("=== STEP 10: MkDocs Assembly + Site Build ===")
+        from src.docs.mkdocs_builder import run_step_10
+        step_10_ok = run_step_10(self.config, str(self.project_dir))
+        if not step_10_ok:
+            raise RuntimeError(
+                f"Step 10 failed for {self.repo_name}. "
+                "MkDocs site build did not complete successfully."
+            )
+
+        logger.info("Pipeline Steps 0–10 completed successfully.")
+
     def run_static_analysis(self, repo_path: Path, classified_files_path: Path, chunks_path: Path):
         """Runs all static analysis modules."""
         analysis_dir = self.project_dir / "analysis"

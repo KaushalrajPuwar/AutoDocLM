@@ -86,7 +86,7 @@ The final generated site includes:
 3. **Core Files Deep-Dive:** The top 200 most vital files (based on PageRank) are deeply analyzed with detailed input/output expectations and interactions.
 4. **Interactive Diagrams:** 
    * A high-level Folder dependency diagram.
-   * A low-level File call-graph diagram generated in Mermaid.
+    * A low-level File import graph (top central files) generated in Mermaid.
 
 ---
 
@@ -122,23 +122,24 @@ uv run python main.py --repo-url https://github.com/username/repo.git
 uv run python main.py --repo-zip ./my_codebase.zip
 ```
 
+After Step 10, AutoDocLM starts a local MkDocs server and prints a live localhost URL in the terminal.
+Press `Ctrl+G` in that terminal to stop the server and end the program.
+
+```bash
+# Optional: build docs without starting local server
+uv run python main.py --repo-url https://github.com/username/repo.git --no-serve-site
+```
+
 > [!TIP]
 > **Customizing Limits:** If the repository is massive, pass `--max-files 100` and `--skip-large-assets` to aggressively trim the graph and save on token costs. The system will intelligently prioritize the most central 100 files using PageRank and drop the rest.
 
 ---
 
-## 🤝 Project State
-This project is currently under active development.
+## 🤝 Team Mixture-Of-Experts
 
-- ✅ **Step 1:** Repo Ingestion & CLI
-- ✅ **Step 2:** File Filtering
-- ✅ **Step 3:** File Classification
-- ✅ **Step 4:** AST & Tree-sitter Chunking
-- ✅ **Step 5:** Static Analysis (Import Graphs, Cross-File Calls, Centrality)
-- ✅ **Step 6:** Embedding and ChromaDB Setup
-- ✅ **Step 7:** LLM Inference
-- ⬜ **Step 8:** Doc Writing / Markdown Generation
-- ⬜ **Step 9:** Mermaid Diagram Generation
-- ⬜ **Step 10:** MkDocs & Site Build
+- [Kaushalraj Puwar](https://github.com/KaushalrajPuwar)
+- [Harsh Gupta](https://github.com/Reverent2005)
+- [Kunal Mittal](https://github.com/freakun0025)
+- [Gautam Kappagal](https://github.com/GautamKappagal)
 
 ---
